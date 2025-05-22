@@ -1,3 +1,3 @@
 variable "bucket_name" {
-  default = "usdykbhzdkun"
+  default = "terraform-claswork-xyst"
 }
