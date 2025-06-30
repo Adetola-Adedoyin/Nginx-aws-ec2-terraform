@@ -1,0 +1,63 @@
+name: Terraform Dev Auto Apply
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'environments/dev/**'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'apply'
+        type: choice
+        options:
+          - apply
+          - destroy
+
+env:
+  TF_VERSION: 1.7.5
+  AWS_REGION: us-east-1
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: environments/dev
+
+      - name: Terraform Plan (Auto)
+        if: github.event_name == 'push' || github.event.inputs.action == 'apply'
+        run: terraform plan -input=false
+        working-directory: environments/dev
+
+      - name: Terraform Apply (Auto)
+        if: github.event_name == 'push' || github.event.inputs.action == 'apply'
+        run: terraform apply -input=false -auto-approve
+        working-directory: environments/dev
+
+      - name: Terraform Plan Destroy (Manual Only)
+        if: github.event.inputs.action == 'destroy'
+        run: terraform plan -destroy -input=false
+        working-directory: environments/dev
+
+      - name: Terraform Destroy (Manual Only – requires confirmation)
+        if: github.event.inputs.action == 'destroy'
+        run: terraform destroy -input=true
+        working-directory: environments/dev
